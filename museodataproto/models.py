@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -12,7 +12,6 @@ class Profile(models.Model):
     def __str__(self):
         return f'{self.user.username} Profile'
 
-# Signal to create or update the user profile when the User model changes
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
@@ -59,7 +58,6 @@ class ArtPiece(models.Model):
     medium = models.ForeignKey(Medium, on_delete=models.SET_NULL, null=True, blank=True)
     styles = models.ManyToManyField(Style, blank=True)
     genres = models.ManyToManyField(Genre, blank=True)
-    notes = models.TextField(blank=True)  
     image = models.ImageField(upload_to='artwork/', null=True, blank=True)
 
     def __str__(self):
@@ -83,11 +81,27 @@ class Gallery(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     art_pieces = models.ManyToManyField(ArtPiece, through='GalleryArtPiece', related_name='galleries', blank=True)
-    archaeological_pieces = models.ManyToManyField(ArchaeoPiece, related_name='galleries', blank=True)
+    archaeological_pieces = models.ManyToManyField(ArchaeoPiece, through='GalleryArchaeoPiece', related_name='galleries', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.title
+
+class GalleryArtPiece(models.Model):
+    gallery = models.ForeignKey(Gallery, on_delete=models.CASCADE)
+    art_piece = models.ForeignKey(ArtPiece, on_delete=models.CASCADE)
+    note = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ('gallery', 'art_piece')
+
+class GalleryArchaeoPiece(models.Model):
+    gallery = models.ForeignKey(Gallery, on_delete=models.CASCADE)
+    archaeo_piece = models.ForeignKey(ArchaeoPiece, on_delete=models.CASCADE)
+    note = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ('gallery', 'archaeo_piece')
 
 class Favorite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
@@ -112,13 +126,3 @@ class Like(models.Model):
 
     def __str__(self):
         return f'Like by {self.user.username}'
-class GalleryArtPiece(models.Model):
-    gallery = models.ForeignKey(Gallery, on_delete=models.CASCADE)
-    art_piece = models.ForeignKey(ArtPiece, on_delete=models.CASCADE)
-    notes = models.TextField(blank=True)  # Campos específicos de curatoría para cada pieza en la galería
-
-    class Meta:
-        unique_together = ('gallery', 'art_piece')  # Evita que la misma pieza se agregue más de una vez a la misma galería
-
- 
-
